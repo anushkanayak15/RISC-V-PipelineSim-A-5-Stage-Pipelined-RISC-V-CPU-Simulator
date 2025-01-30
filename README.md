@@ -1,85 +1,64 @@
-# M151M Project #1 : Pipelined RISC-V CPU Simulator
+# RISC-V PipelineSim: A 5-Stage Pipelined RISC-V CPU Simulator
 
-**Description**:
+## Overview  
+RISC-V PipelineSim is a C++-based simulator for a **5-stage pipelined RISC-V processor**, implementing the **RV32-I base instruction set**. This project simulates a functional **instruction pipeline**, showcasing how modern RISC-V processors execute instructions efficiently.
 
-In this project, you will implement a RISC-V 5-stage pipelined processor using
-C++.
+This project was developed as part of **M151M Project #1** and includes implementations for **instruction decode, execution, and pipeline timing simulation**.
 
-The ISA of this processor is the standard RV32-I base extension.
+## Features  
+- Implements a **5-stage pipelined RISC-V CPU**:
+  1. Fetch  
+  2. Decode  
+  3. Execute  
+  4. Memory Access  
+  5. Write-back  
+- Supports **RV32-I ISA** (Integer Instructions)  
+- Implements **hazard handling techniques** (data forwarding, stall handling)  
+- Includes **precompiled test cases** for verification  
+- Debugging support with multiple verbosity levels  
 
-The provided source code contains an incomplete implementation of the CPU.
-The processor implementation consists of the following parts:
-* common:       shared directory of utility libraries
-* src:          main source directory
-* tests:        tests directory
-* Makefile:     build make file
-* README.md:    this document
+---
 
-The project is divided into 3 parts:
+## Implementation Details  
 
-## Part 1 : Decode
-In this part, you will complete the implementation of the decode logic.
-Refer to **TODO** entries inside decode.cpp for where to make changes.
+### Part 1: Decode  
+- Implements **instruction decoding logic** in `decode.cpp`.  
+- Extracts opcode, funct3, funct7, and operand registers from instructions.  
 
-## Part 2 : Execute
-In this part, you will complete the implementation of the execute logic.
-We recommend not adding new types to the codebase, the exiting types arer sufficient to complete the project.
-Refer to **TODO** entries inside execute.cpp for where to make changes.
+### Part 2: Execute  
+- Implements **ALU operations** in `execute.cpp`.  
+- Handles different instruction types (R, I, S, B, U, J formats).  
 
-## Part 3 : Timing Simulation
-In this part, you will complete the implementation of the pipeline logic.
-Refer to **TODO** entries inside core.cpp for where to make changes.
+### Part 3: Timing Simulation  
+- Implements **pipeline logic** in `core.cpp`.  
+- Manages instruction flow through the pipeline, handling hazards and forwarding.  
 
-## Testing your code
-The provided Makefile contains a `test` command to execute all provided tests.
+---
 
-    $ make tests
+## Building and Running the Simulator  
 
-All tests are under the /tests/ folder.
-You can execute an individual test by running:
+### Prerequisites  
+- **Linux development environment** (Recommended: Ubuntu 18.04 or later)  
+- **C++11 or later**  
 
-    $ ./tinyrv -s tests/rv32ui-p-sub.hex
+### Build Instructions  
+```bash
+# Clone the repository
+git clone https://github.com/your-username/riscv-pipelinesim.git
+cd riscv-pipelinesim
 
-If a test succeeds, you will get "PASSED!" output message.
+# Build the simulator
+make
 
-## Debugging your code
-You need to build the project with DEBUG=```LEVEL``` where level varies from 0 to 5.
-That will turn on the debug trace inside the code and show you what the processor is doing and some of its internal states.
+# Run all test cases
+make tests  
 
-    $ DEBUG=3 make
-    $ ./tinyrv -s tests/rv32ui-p-sub.hex
+# Run a specific test case
+./tinyrv -s tests/rv32ui-p-sub.hex
 
-## What to submit
-**A zip file of your source code.
-When done with your changes, execute ```make submit``` to generate the submission.zip.
-Do not use another method for creating the zip file.
+# Enable debug mode (Level 3)
+DEBUG=3 make  
+./tinyrv -s tests/rv32ui-p-sub.hex
 
-    $ make submit
-
-Please submit the **submission.zip** file.
-
-## Build instructions
-* run ```make``` at the root of the project to build the simulator
-
-        $ make
-
-* A linux development environment is needed to build the project
-* We recommend using a Ubuntu 18.04 or above distribution
-* This C++ project requires C++ 11 to compile and it should come installed on Ubuntu 18.04 or above
-
-## Guidelines
-* Only modify the following files: core.cpp, decode.cpp, execute.cpp
-* Do not remove an existing file from the project.
-* Do not change the Makefile, you can always add a new file as a header. Make sure to include the new file under the **src/** folder.
-
-## Grading
-* simulator compiles successfully: 1 pts
-* simulator passes all tests: 5 pts
-* simulator timing is correct: 4 pts
-Based on the coverage of test suites, you will get partial scores.
-
-***Please do not procrastinate.***
-
-## Resources
-* RISC-V ISA Specs: https://riscv.org/wp-content/uploads/2017/05/riscv-spec-v2.2.pdf
-* Class materials.
+make submit  # Generates submission.zip
+```
