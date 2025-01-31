@@ -23,9 +23,14 @@
 #include <util.h>
 #include "core.h"
 
+//responsible for executing instructions decoded in the previous stage
+// Performing arithmetic/logical operations (ALU)
+//Handling branch logic (Branch Unit)
+//Interacting with memory (Memory Access)
 using namespace tinyrv;
 
 uint32_t Core::alu_unit(const Instr &instr, uint32_t rs1_data, uint32_t rs2_data, uint32_t PC) {
+  //it will performs computations based on the instruction type
   auto exe_flags  = instr.getExeFlags();
   auto alu_op     = instr.getAluOp();
 
@@ -33,7 +38,7 @@ uint32_t Core::alu_unit(const Instr &instr, uint32_t rs1_data, uint32_t rs2_data
   uint32_t alu_s2 = exe_flags.alu_s2_imm ? instr.getImm() : rs2_data;
 
   if (exe_flags.alu_s1_inv) {
-    alu_s1 = ~alu_s1;
+    alu_s1 = ~alu_s1; // Invert first operand if needed
   }
 
   uint32_t rd_data = 0;
@@ -42,43 +47,54 @@ uint32_t Core::alu_unit(const Instr &instr, uint32_t rs1_data, uint32_t rs2_data
   case AluOp::NONE:
     break;
   case AluOp::ADD: {
-    rd_data = // TODO:
+        // TODO:
+    rd_data = alu_s1 + alu_s2;
+  
     break;
   }
   case AluOp::SUB: {
-    rd_data = // TODO:
+    // TODO:
+    rd_data = alu_s1 - alu_s2;
     break;
   }
   case AluOp::AND: {
-    rd_data = // TODO:
+    // TODO:
+    rd_data = alu_s1 & alu_s2;
     break;
   }
   case AluOp::OR: {
-    rd_data = // TODO:
+    // TODO:
+    rd_data = alu_s1 | alu_s2;
     break;
   }
   case AluOp::XOR: {
-    rd_data = // TODO:
+    // TODO:
+    rd_data = alu_s1 ^ alu_s2;
     break;
   }
   case AluOp::SLL: {
-    rd_data = // TODO:
+    // TODOshift left logical:
+    rd_data = alu_s1 << (alu_s2 & 0x1F);
     break;
   }
   case AluOp::SRL: {
-    rd_data = // TODO:
+    // TODO shift right logical:
+    rd_data = alu_s1 >> (alu_s2 & 0x1F);
     break;
   }
   case AluOp::SRA: {
-    rd_data = // TODO:
+    // TODO shift right arithmetic shift:
+    rd_data = (int32_t)alu_s1 >> (alu_s2 & 0x1F); // Arithmetic shift
     break;
   }
   case AluOp::LTI: {
-    rd_data = // TODO:
+    // TODO less than  signed:
+    rd_data = (int32_t)alu_s1 < (int32_t)alu_s2;
     break;
   }
   case AluOp::LTU: {
-    rd_data = // TODO:
+    // TODO less than unsigned:
+    rd_data = alu_s1 < alu_s2;
     break;
   }
   default:
@@ -89,6 +105,7 @@ uint32_t Core::alu_unit(const Instr &instr, uint32_t rs1_data, uint32_t rs2_data
 }
 
 uint32_t Core::branch_unit(const Instr &instr, uint32_t rs1_data, uint32_t rs2_data, uint32_t rd_data, uint32_t PC) {
+  //The Branch Unit evaluates branch conditions and determines whether the branch should be taken
   auto br_op = instr.getBrOp();
 
   bool br_taken = false;
@@ -96,53 +113,64 @@ uint32_t Core::branch_unit(const Instr &instr, uint32_t rs1_data, uint32_t rs2_d
   switch (br_op) {
   case BrOp::NONE:
     break;
-  case BrOp::JAL:
-  case BrOp::JALR: {
-    br_taken = // TODO:
+  case BrOp::JAL: //?? Always takes?
+  case BrOp::JALR: { //?? Always taken?
+  // TODO:
+    br_taken = true;
     break;
   }
   case BrOp::BEQ: {
-    br_taken = // TODO:
+    // TODO when they are equal:
+    br_taken = (rs1_data == rs2_data);
     break;
   }
   case BrOp::BNE: {
-    br_taken = // TODO:
+    // TODO when they are not equal:
+    br_taken = (rs1_data != rs2_data);
     break;
   }
   case BrOp::BLT: {
-    br_taken = // TODO:
+    // TODO less than signed:
+    br_taken = (int32_t)rs1_data < (int32_t)rs2_data;
     break;
   }
   case BrOp::BGE: {
-    br_taken = // TODO:
+    // TODO greater than or equal to :
+    br_taken = (int32_t)rs1_data >= (int32_t)rs2_data;
     break;
   }
   case BrOp::BLTU: {
-    br_taken = // TODO:
+    // TODO less than unsigned:
+    br_taken = rs1_data < rs2_data;
     break;
   }
   case BrOp::BGEU: {
-    br_taken = // TODO:
+    // TODO greater than or equal to unsigned:
+    br_taken = rs1_data >= rs2_data;
     break;
   }
   default:
     std::abort();
   }
 
-  // resolve branches
-  if (br_op != BrOp::NONE) {
-    auto br_target = rd_data;
-    if (br_taken) {
+  // resolve branches checks if a branch intruction is being processed
+  if (br_op != BrOp::NONE) { // if instr is not a branch it does nothing
+    auto br_target = rd_data; // branch target address is stored in rd_data, If the branch is taken, the PC will be updated to br_target
+    if (br_taken) { // if branch condiiton is met
       uint32_t next_PC = PC + 4;
       if (br_op == BrOp::JAL || br_op == BrOp::JALR) {
-        rd_data = // TODO:
+        // TODO: Set rd_data to the next instruction address (PC + 4)
+        rd_data = PC + 4; // increment the program counter by 4- the return address
       }
-      // check misprediction
+      // check misprediction 
+      //br_target is not equal to the next sequential PC (PC + 4), then the CPU mispredicted the branch
+      //so we have to set pc to the corrrect branch target
       if (br_op != BrOp::JAL && br_target != next_PC) {
-        PC_ = // TODO:
-        // flush pipeline
-        if_id_.reset();
-        fetch_stalled_ = false;
+         // TODO:
+        PC_ = br_target;
+        // flush pipeline to avoid executing incorrect instructions since the CPU fetched the wrong instructions it needs to be clear
+        if_id_.reset(); //removes incorrrect instruciton waiting in the pipeline
+        fetch_stalled_ = false; // new instruction fetched from the correct pc
         DT(2, "*** Branch misprediction: (#" << id_ex_.data().uuid << ")");
       }
     }
@@ -153,27 +181,29 @@ uint32_t Core::branch_unit(const Instr &instr, uint32_t rs1_data, uint32_t rs2_d
 }
 
 uint32_t Core::mem_access(const Instr &instr, uint32_t rd_data, uint32_t rs2_data) {
-  auto exe_flags = instr.getExeFlags();
-  auto func3     = instr.getFunc3();
+  // the mem access unit handles loads stores and control status register operations
+  auto exe_flags = instr.getExeFlags(); //extract the execution falg which stores the instrucion properties like load/store/csr
+  auto func3     = instr.getFunc3(); //Determines load/store data size and sign extension
 
   // handle loads
   if (exe_flags.is_load) {
-    uint64_t mem_addr = rd_data;
-    uint32_t data_bytes = 1 << (func3 & 0x3);
-    uint32_t data_width = 8 * data_bytes;
-    uint32_t read_data = 0;
+    uint64_t mem_addr = rd_data; //The address where data should be read from
+    uint32_t data_bytes = 1 << (func3 & 0x3);// how many bytes to read
+    uint32_t data_width = 8 * data_bytes; //bit-width of the value 
+    uint32_t read_data = 0; //Stores the retrieved memory valu
     this->dmem_read(&read_data, mem_addr, data_bytes);
     switch (func3) {
-    case 0: // RV32I: LB
-    case 1: // RV32I: LH
-      rd_data = sext(read_data, data_width);
+    case 0: // RV32I: LB (Load Byte - Signed)
+    case 1: // RV32I: LH (Load Halfword - Signed)
+      rd_data = sext(read_data, data_width); // Sign-extend the read value to preserve negative val
       break;
-    case 2: // RV32I: LW
-      rd_data = // TODO:
+    case 2: // RV32I: LW (Load Word) There is no need to sign extend here
+      rd_data = read_data;// TODO:  this directly assign the value
       break;
-    case 4: // RV32I: LBU
-    case 5: // RV32I: LHU
-      rd_data = // TODO:
+    case 4: // RV32I: LBU (Load Byte - Unsigned)
+    case 5: // RV32I: LHU (Load Halfword - Unsigned)
+    //Zero-extend instead of sign-extending to prevent unintended negative values??
+      rd_data = read_data & ((1 << data_width) - 1); // Zero-extend the value NOT SURE OF THIS??// TODO:
       break;
     default:
       std::abort();
