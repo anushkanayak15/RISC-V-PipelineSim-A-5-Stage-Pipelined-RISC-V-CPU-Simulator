@@ -22,11 +22,7 @@
 #include "processor_impl.h"
 
 using namespace tinyrv;
-//Instruction Fetch (IF)
-//Instruction Decode (ID)
-//Execute (EX)
-//Memory Access (MEM)
-//Write Back (WB)
+
 Core::Core(const SimContext& ctx, uint32_t core_id, ProcessorImpl* processor)
     : SimObject(ctx, "core")
     , core_id_(core_id)
@@ -38,7 +34,7 @@ Core::Core(const SimContext& ctx, uint32_t core_id, ProcessorImpl* processor)
 
 Core::~Core() {}
 
-void Core::reset() { //Initializes the CPU State
+void Core::reset() {
   if_id_.reset();
   id_ex_.reset();
   ex_mem_.reset();
@@ -56,23 +52,18 @@ void Core::reset() { //Initializes the CPU State
   exited_ = false;
 }
 
-void Core::tick() { //Advances the Pipeline Every Clock Cycle
-// Processes all five pipeline stages per cycle in reverse order to prevent overwrites before execution
+void Core::tick() {
   this->wb_stage();
   this->mem_stage();
   this->ex_stage();
   this->id_stage();
   this->if_stage();
 
-  ++perf_stats_.cycles;//Increments clock cycle count
+  ++perf_stats_.cycles;
   DPN(2, std::flush);
 }
 
 void Core::if_stage() {
-  //Fetches the next instruction from memory at PC
-  //Stores the instruction in the IF/ID pipeline register
-  //ncrements the program counter (PC_)
-  // Stalls fetch stage if a branch instruction is pending
   if (fetch_stalled_ || !if_id_.empty())
     return;
 
@@ -110,7 +101,6 @@ void Core::id_stage() {
 
   // lock fetch stage if exiting program
   if (!instr->getExeFlags().is_exit) {
-    // Unlock fetch stage if not exiting
     fetch_stalled_ = false;
   }
 
@@ -118,7 +108,7 @@ void Core::id_stage() {
   if (instr->getBrOp() == BrOp::JAL
    && !instr->getExeFlags().is_exit) {
     auto br_target = stage_data.PC + instr->getImm();
-    PC_ = br_target; // Update PC for jump instruction
+    PC_ = br_target;
   }
 
   // check data hazards
@@ -150,13 +140,14 @@ void Core::ex_stage() {
 
   // move instruction data to next stage
   ex_mem_.push({stage_data.instr, stage_data.rs1_data, stage_data.rs2_data, result, stage_data.PC, stage_data.uuid});
+
   id_ex_.pop();
 }
 
 void Core::mem_stage() {
-  //Handles memory read/write operations
-  if (ex_mem_.empty() || !mem_wb_.empty())
+  if (ex_mem_.empty() || !mem_wb_.empty()) {
     return;
+  }
 
   auto& stage_data = ex_mem_.data();
 
@@ -170,8 +161,6 @@ void Core::mem_stage() {
 }
 
 void Core::wb_stage() {
-  //Writes computed result back to register file
-  // Handles program termination 
   if (mem_wb_.empty())
     return;
 
@@ -196,19 +185,20 @@ void Core::wb_stage() {
 bool Core::check_data_hazards(const Instr &instr) {
   auto exe_flags = instr.getExeFlags();
 
-  if (!ex_mem_.empty()) { // Check if EX/MEM stage is occupied
+  if (!ex_mem_.empty()) {
     auto& ex_data = ex_mem_.data();
+    auto& ex_instr  = *ex_data.instr;
     // TODO: check LDAD instruction data hazards in EX/MEM
-    auto& ex_instr = *ex_data.instr;
-    // Check if instruction in EX stage is a load (LD) and its destination (rd) matches current instruction's source (rs1 or rs2)
+    //if current instruction uses the register ex_mem is writing to, return true
     if (ex_instr.getOpcode() == Opcode::L && (
+      //if the current instruction actually uses rs1 andif rs1 matches the destination (rd) of the load instruction in EX/MEM, the instr is dependent on the load instr
         (exe_flags.use_rs1 && instr.getRs1() == ex_instr.getRd()) ||
         (exe_flags.use_rs2 && instr.getRs2() == ex_instr.getRd()))) {
       return true; // Stall required to wait for load instruction to complete
     }
   }
 
-  return false;//No data hazard detected
+  return false;
 }
 
 bool Core::data_forwarding(uint32_t reg, uint32_t* data) {
@@ -221,6 +211,7 @@ bool Core::data_forwarding(uint32_t reg, uint32_t* data) {
     if (ex_instr.getExeFlags().use_rd && ex_instr.getRd() == reg) {
       *data = ex_data.result;
       forwarded = true;
+      //      std::cout << "DATA FORWARDED from EX/MEM" << std::endl;
     }
   }
 
@@ -228,9 +219,11 @@ bool Core::data_forwarding(uint32_t reg, uint32_t* data) {
     auto& mem_data = mem_wb_.data();
     auto& mem_instr = *mem_data.instr;
     // TODO: check data forwarding from MEM/WB
-    if (mem_instr.getExeFlags().use_rd && mem_instr.getRd() == reg) {
+    // if(mem_instr.getRd() == reg) 
+    if (mem_instr.getExeFlags().use_rd && mem_instr.getRd() == reg){
       *data = mem_data.result;
       forwarded = true;
+      //      std::cout << "DATA FORWARDED from MEM/WB" << std::endl;
     }
   }
 
