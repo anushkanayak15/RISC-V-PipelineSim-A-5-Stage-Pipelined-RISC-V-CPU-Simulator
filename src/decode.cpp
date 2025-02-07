@@ -10,18 +10,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// Copyright 2025 Blaise Tine
-//
-// Licensed under the Apache License;
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 #include <iostream>
 #include <string>
@@ -232,7 +220,6 @@ std::shared_ptr<Instr> Core::decode(uint32_t instr_code) const {
   uint32_t imm = 0x0;
 
   // instruction type decoding
-  int width;
 
   auto inst_type = op_it->second;
   switch (inst_type) {
@@ -278,9 +265,9 @@ std::shared_ptr<Instr> Core::decode(uint32_t instr_code) const {
       }
       // TODO: 31:20
       imm = instr_code >> 20 & 0xFFF;
-      if (imm & 0x800) {
-        imm |= 0xFFFFF000;
-      }
+      // if (imm & 0x800) {
+      //   imm |= 0xFFFFF000;
+      // }
     } break;
     case Opcode::FENCE:
       break;
@@ -309,10 +296,16 @@ std::shared_ptr<Instr> Core::decode(uint32_t instr_code) const {
     exe_flags.use_imm = 1;
     exe_flags.alu_s2_imm = 1;
     // TODO: instr[31], instr[7], instr[30:25], instr[11:8]
-    imm = ((instr_code >> 31) & 0x1) << 12;
-    imm = imm | ((instr_code >> 7) & 0x1) << 11;
-    imm = imm | ((instr_code >> 25) & 0x3F) << 5;
-    imm = imm | ((instr_code >> 8) & 0xF);
+    // imm = ((instr_code >> 31) & 0x1) << 12;
+    // imm = imm | ((instr_code >> 7) & 0x1) << 11;
+    // imm = imm | ((instr_code >> 25) & 0x3F) << 5;
+    // imm = imm | ((instr_code >> 8) & 0xF) << 1;
+
+    imm = ((instr_code >> 31) & 0x1) << 12 |  // Bit 12 (sign bit)
+      ((instr_code >> 7)  & 0x1) << 11 |  // Bit 11
+      ((instr_code >> 25) & 0x3F) << 5 |  // Bits [10:5]
+      ((instr_code >> 8)  & 0xF) << 1;    // Bits [4:1]
+
     
     if(imm & 0x1000) //0b100000000000
       imm |= 0xFFFFE000; //sign extend
@@ -323,10 +316,11 @@ std::shared_ptr<Instr> Core::decode(uint32_t instr_code) const {
     exe_flags.use_imm = 1;
     exe_flags.alu_s2_imm = 1;
     //TODO: instr[31:12]
-    imm = ((instr_code >> 12) & 0xFFFFF);
+    imm = (instr_code & 0xFFFFF000);
+    // imm = ((instr_code >> 12) & 0xFFFFF);
 
-    if(imm & 0x80000000) //0b10000000000000000000000000000000
-      imm |= 0xFFF00000; //sign extend
+    // if(imm & 0x80000000) //0b10000000000000000000000000000000
+    //   imm |= 0xFFF00000; //sign extend
   } break;
 
   case InstType::J: {
@@ -381,6 +375,7 @@ std::shared_ptr<Instr> Core::decode(uint32_t instr_code) const {
       default:
         std::abort();
     }
+    break;
   }
   case Opcode::I: {
     // TODO: 
@@ -393,7 +388,10 @@ std::shared_ptr<Instr> Core::decode(uint32_t instr_code) const {
       case 5: alu_op = func7 ? AluOp::SRA : AluOp::SRL; break;
       case 6: alu_op = AluOp::OR; break;
       case 7: alu_op = AluOp::AND; break;
+      default:
+        std::abort();
     }
+    break;
   }
   case Opcode::B: {
     exe_flags.alu_s1_PC = 1;
@@ -405,8 +403,10 @@ std::shared_ptr<Instr> Core::decode(uint32_t instr_code) const {
       case 5: br_op = BrOp::BGE; break;
       case 6: br_op = BrOp::BLTU; break;
       case 7: br_op = BrOp::BGEU; break;
+      default:
+        std::abort();
     }
-    alu_op = AluOp::SUB; 
+    alu_op = AluOp::ADD; 
     break;
   }
   case Opcode::JAL: {
@@ -512,3 +512,4 @@ std::shared_ptr<Instr> Core::decode(uint32_t instr_code) const {
   instr->setExeFlags(exe_flags);
 
   return instr;
+}
